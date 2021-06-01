@@ -1,0 +1,50 @@
+version: '3.5'
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-CU10-ubuntu-20.04
+    container_name: keycloak_mssql
+    ports:
+        - "8086:1433"
+    networks:
+        - testnet
+    environment:
+        - ACCEPT_EULA=Y
+        - SA_PASSWORD=HS3Kd6Z#5WzZ7@hBqBr4
+        - MSSQL_PID=Express
+  mssqlscripts:
+    image: mcr.microsoft.com/mssql-tools
+    depends_on:
+        - mssql
+    container_name: keycloak_script
+    networks:
+      - testnet
+    command: /bin/bash -c 'until /opt/mssql-tools/bin/sqlcmd -S mssql -U sa -P "HS3Kd6Z#5WzZ7@hBqBr4" -Q "create database Keycloak"; do sleep 5; done'
+
+  keycloak:
+    image: jboss/keycloak:latest
+    depends_on:
+      - mssql
+      - mssqlscripts
+    container_name: keycloak
+    restart: unless-stopped    
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=perth2000
+      - PROXY_ADDRESS_FORWARDING=true
+      - KEYCLOAK_FRONTEND_URL=http://trexcloud.ch/auth/
+      - DB_VENDOR=mssql
+      - DB_USER=sa
+      - DB_PASSWORD=HS3Kd6Z#5WzZ7@hBqBr4
+      - DB_ADDR=mssql
+      - DB_DATABASE=Keycloak
+    ports:
+        #- 8089:8443
+        - 8180:8080
+    networks:
+        - testnet
+
+
+networks: 
+    testnet:
+        name: testnet
+
